@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset=utf-8>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Testing: Sapientia</title>
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+        <link href="css/bootstrap.min.css" type="text/css" rel="stylesheet">
+
+    </head>
+    <body>
+        <div class="container">
+                <div id="material"></div>
+        </div>
+    </body>
+    <footer>
+    </footer>
+    <script src="js/jquery-3.1.0.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/sapientia.js"></script>
+    <script>
+        sapientia("https://api.myjson.com/bins/2n9o9");
+        $("#material").sapientia(); 
+    </script>
+</html>
