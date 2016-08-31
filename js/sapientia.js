@@ -3,12 +3,16 @@
     var $ = global.$;
     var version = '1.0.0';
     var container = null;
-    var ad = false;
+    var ad = true; //autodraw
     var db = null;
+
     var labels = {
         pdf: 'Pdf',
-        pps: 'Presentation',
-        vid: 'Video'
+        pps: 'Presentación',
+        vid: 'Video',
+        materials: 'Materiales',
+        activities: 'Actividades',
+        tests: 'Pruebas'
     }
 
     //constructor recibiendo una url en busca del contenido
@@ -29,7 +33,8 @@
 
     //Identificador cuando se utiliza un selector
     var objectSetter = function (autodraw) {
-        ad = autodraw;
+        ad = autodraw || true;
+
         container = $(this);
     }
 
@@ -49,55 +54,53 @@
     }
 
     var draw = function () {
-        var material = db.content.material;
-        drawMaterial(material, ad);
+        drawTitle();
+        drawMaterial();
+        drawActivities();
+        drawTests();
     }
 
-    function applyClass(selector, oclass, withStyle) {
-        if (withStyle) {
-            selector.addClass(oclass);
-        }
-    }
+    var drawTitle = function () {
+        var title = db.name;
+        var description = db.description;
 
-    function renderVideo(dataItem) {
-        var isFile = dataItem.location.slice(-4, -3) === '.';
-        var content = null;
+        if (title) {
+            var jumbotron = $('<div>');
+            jumbotron.attr('id', 'sap-title')
+            jumbotron.addClass('jumbotron');
 
-        if (isFile) {
-            var content = $('<video>');
-            content.attr('controls', 'controls');
+            var h1 = $('<h1>');
+            h1.text(title);
 
-            var src = $('<source>');
+            jumbotron.append(h1);
 
-            src.attr('src', dataItem.location);
-            src.attr('type', 'video/' + dataItem.location.slice(-3));
+            if (description) {
+                var p = $('<p>');
+                p.text(description);
 
-            content.append(src);
-        } else {
-            var content = $('<iframe>');
-
-            if (dataItem.location.search('youtu') > -1) { //Si es un video de youtube
-                if (dataItem.location.search('embed') > -1) {
-                    content.attr('src', dataItem.location)
-                } else {
-                    content.attr('src', dataItem.location.replace('youtube.com/', 'youtube.com/embed/').replace('watch?v=', '').replace('youtu.be/', 'www.youtube.com/embed/'))
-                }
+                jumbotron.append(p);
             }
+
+            container.append(jumbotron);
         }
-
-        content.addClass('embed-responsive-item');
-
-        return content;
     }
 
-    var drawMaterial = function (material, withStyle) {
+    var drawMaterial = function () {
+        var material = db.content.material;
+
         if (material) {
+            var wrapper = $('<div>');
+            wrapper.attr('id', 'sap-materials')
+
+            drawH2(labels.materials, wrapper);
+
             var ul = $('<ul>');
             ul.attr('id', 'materials');
-            applyClass(ul, 'nav nav-tabs nav-justified', withStyle);
+            ul.addClass('nav nav-tabs nav-justified');
 
             var expositor = $('<div>');
             expositor.attr('id', 'expositor');
+            expositor.addClass('embed-responsive embed-responsive-16by9');
 
             var currentTabs = [];
 
@@ -105,15 +108,15 @@
                 var li = $('<li>');
                 var a = $('<a>');
 
-                if (i === 0) {
+                if (i === 0) { //Si es el primer elemento lo activa y muestra
                     li.addClass('active');
+                    var content = renderByType(obj);
+                    expositor.append(content);
                 }
 
                 li.data('info', obj);
                 li.attr('role', 'material')
                 a.attr('href', '#');
-
-                var title = '';
 
                 var indexTab = currentTabs.lastIndexOf(labels[obj.type]);
 
@@ -129,29 +132,141 @@
                 ul.append(li);
 
                 li.click(function () {
+                    expositor.empty();
                     $('#materials li').removeClass('active');
                     $(this).addClass('active');
                     var dataItem = $(this).data().info;
-                    var type = dataItem.type;
-                    expositor.empty();
-                    var content = null;
 
-                    switch (type) {
-                    case 'vid':
-                        expositor.addClass('embed-responsive embed-responsive-16by9');
-                        content = renderVideo(dataItem);
-                        break;
-                    }
+                    var type = dataItem.type;
+
+                    var content = renderByType(dataItem);
 
                     expositor.append(content);
-
                 });
             })
 
-            container.append(ul);
+            wrapper.append(ul);
 
-            container.append(expositor);
+            wrapper.append(expositor);
+
+            container.append(wrapper);
         }
+
+        function renderByType(dataItem) {
+            switch (dataItem.type) {
+            case 'pdf':
+                return renderPdf(dataItem);
+                break;
+            case 'pps':
+                return renderPps(dataItem);
+                break;
+            case 'vid':
+                return renderVideo(dataItem);
+                break;
+            }
+        }
+
+        function renderPdf(dataItem) {
+            var content = null;
+            if (dataItem) {
+                if (dataItem.location) {
+                    if (dataItem.location.substring(dataItem.location.length - 4, dataItem.location.length) === '.pdf') { //pdf
+                        content = $('<iframe>');
+                        content.addClass('embed-responsive-item');
+                        content.attr('src', 'http://docs.google.com/gview?url=' + dataItem.location + '&embedded=true');
+                        content.attr('width', '100%');
+                        content.attr('height', '100%');
+                        content.attr('frameborder', '0');
+                    }
+                }
+            }
+            return content;
+        }
+
+        function renderPps(dataItem) {
+            var content = null;
+            if (dataItem) {
+                if (dataItem.location) {
+                    if (dataItem.location.slice(-4, -1) === '.pp') { //Powerpoint pps|ppt
+                        content = $('<iframe>');
+                        content.addClass('embed-responsive-item');
+                        content.attr('src', 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(dataItem.location));
+                        content.attr('width', '100%');
+                        content.attr('height', '100%');
+                        content.attr('frameborder', '0');
+                    }
+                }
+            }
+            return content;
+        }
+
+        function renderVideo(dataItem) {
+            var content = null;
+            if (dataItem) {
+                var isFile = dataItem.location.slice(-4, -3) === '.';
+
+                if (isFile) {
+                    content = $('<video>');
+                    content.attr('controls', 'controls');
+
+                    var src = $('<source>');
+
+                    src.attr('src', dataItem.location);
+                    src.attr('type', 'video/' + dataItem.location.slice(-3));
+
+                    content.append(src);
+                } else {
+                    content = $('<iframe>');
+
+                    if (dataItem.location.search('youtu') > -1) { //Si es un video de youtube
+                        if (dataItem.location.search('embed') > -1) {
+                            content.attr('src', dataItem.location)
+                        } else {
+                            content.attr('src', dataItem.location.replace('youtube.com/', 'youtube.com/embed/').replace('watch?v=', '').replace('youtu.be/', 'www.youtube.com/embed/'))
+                        }
+                    }
+                }
+
+                content.addClass('embed-responsive-item');
+            }
+            return content;
+        }
+
+    }
+
+    var drawActivities = function () {
+        var wrapper = $('<div>');
+        wrapper.attr('id', 'sap-activities')
+        var activities = db.content.activities;
+
+        if (activities) {
+            drawH2(labels.activities, wrapper);
+        }
+
+        container.append(wrapper);
+    }
+
+    var drawTests = function () {
+        var wrapper = $('<div>');
+        wrapper.attr('id', 'sap-tests')
+        var tests = db.content.tests;
+
+        if (tests) {
+            drawH2(labels.tests, wrapper);
+        }
+
+        container.append(wrapper);
+    }
+
+    function drawH2(content, wrapper) {
+        var title = labels.materials;
+        var h2 = $('<h2>');
+        h2.addClass('page-header')
+        h2.text(content);
+
+        wrapper = wrapper || container;
+
+        wrapper.append(h2);
     }
 
 })(window);
