@@ -5,27 +5,28 @@
     var container = null;
     var ad = true; //autodraw
     var db = null;
+	var contentTypes = ['pdf','vid','pps']
 
     var labels = {
         pdf: 'Pdf',
-        pps: 'Presentación',
         vid: 'Video',
+		pps: 'Presentación',
         materials: 'Materiales',
         activities: 'Actividades',
         tests: 'Pruebas'
     }
 
     //constructor recibiendo una url en busca del contenido
-    function sapientia(url) {
+    function sapientia(code) {
         var sapientia = objectSetter;
 
-        $.getJSON(url, loadObjects);
+        $.getJSON('http://sapientia.azurewebsites.net/api/Content?shorturl='+code+'&callback=?', loadObjects);
         $.prototype.sapientia = sapientia;
     }
 
     //instancia en el objeto global una instancia
-    global.sapientia = function (url) {
-        sapientia(url);
+    global.sapientia = function (code) {
+        sapientia(code);
     }
 
     global.sapientia.labels = labels;
@@ -105,7 +106,7 @@
             var currentTabs = [];
 
             $.each(material, function (i, obj) {
-                var li = $('<li>');
+				var li = $('<li>');
                 var a = $('<a>');
 
                 if (i === 0) { //Si es el primer elemento lo activa y muestra
@@ -121,13 +122,13 @@
                 var indexTab = currentTabs.lastIndexOf(labels[obj.type]);
 
                 if (indexTab >= 0) {
-                    a.text(labels[obj.type] + '-' + indexTab);
+                    a.text(labels[contentTypes[obj.type]] + '-' + indexTab);
                 } else {
-                    a.text(labels[obj.type]);
+                    a.text(labels[contentTypes[obj.type]]);
                 }
 
                 currentTabs.push(labels[obj.type]);
-
+				
                 li.append(a);
                 ul.append(li);
 
@@ -154,14 +155,14 @@
 
         function renderByType(dataItem) {
             switch (dataItem.type) {
-            case 'pdf':
+            case 0:
                 return renderPdf(dataItem);
                 break;
-            case 'pps':
-                return renderPps(dataItem);
-                break;
-            case 'vid':
+            case 1:
                 return renderVideo(dataItem);
+                break;
+			case 2:
+                return renderPps(dataItem);
                 break;
             }
         }
