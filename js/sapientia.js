@@ -157,13 +157,10 @@
             switch (dataItem.type) {
             case 0:
                 return renderPdf(dataItem);
-                break;
             case 1:
                 return renderVideo(dataItem);
-                break;
 			case 2:
                 return renderPps(dataItem);
-                break;
             }
         }
 
