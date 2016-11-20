@@ -5,27 +5,35 @@
     var container = null;
     var ad = true; //autodraw
     var db = null;
-	var contentTypes = ['pdf','vid','pps']
+    var contentTypes = ['pdf', 'vid', 'pps']
+    var msgTypes = Object.freeze({ info: 0, success: 1, error: 2 });
 
     var labels = {
         pdf: 'Pdf',
         vid: 'Video',
-		pps: 'Presentación',
+        pps: 'Presentación',
         materials: 'Materiales',
         activities: 'Actividades',
+        hypotheses: 'Hipótesis',
         tests: 'Pruebas'
     }
 
+    var fonsUrl = '';
+
     //constructor recibiendo una url en busca del contenido
     function sapientia(code) {
-        var sapientia = objectSetter;
+        $.prototype.sapientia = objectSetter
 
-        $.getJSON('http://sapientia.azurewebsites.net/api/Content?shorturl='+code+'&callback=?', loadObjects);
-        $.prototype.sapientia = sapientia;
+        var jqxhr = $.getJSON(fonsUrl + '/api/Content?shorturl=' + code + '&callback=?', loadObjects);
+
+        jqxhr.fail(function (response) {
+            displayMessage(response.statusText + " - " + response.status, msgTypes.error)
+        });
     }
 
-    //instancia en el objeto global una instancia
-    global.sapientia = function (code) {
+    //instancia el objeto global
+    global.sapientia = function (code, url) {
+        fonsUrl = url || 'http://sapientia.azurewebsites.net';
         sapientia(code);
     }
 
@@ -35,8 +43,25 @@
     //Identificador cuando se utiliza un selector
     var objectSetter = function (autodraw) {
         ad = autodraw || true;
-
         container = $(this);
+        container.css('padding-bottom', '10px');
+
+        drawMessenger();
+
+        var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+
+        if (isFirefox) {
+            displayMessage('Firefox is not well supported', msgTypes.error);
+        }
+    }
+
+    //Crea el objeto que se utilizará como repositorio de mensajes
+    function drawMessenger() {
+        var div = $('<div>');
+
+        div.attr('id', 'msgbox');
+
+        container.append(div);
     }
 
     //Cuando recibe los objetos de la consulta JSON
@@ -57,8 +82,9 @@
     var draw = function () {
         drawTitle();
         drawMaterial();
-        drawActivities();
-        drawTests();
+        drawHypotheses();
+        //drawActivities();
+        //drawTests();
     }
 
     var drawTitle = function () {
@@ -106,7 +132,7 @@
             var currentTabs = [];
 
             $.each(material, function (i, obj) {
-				var li = $('<li>');
+                var li = $('<li>');
                 var a = $('<a>');
 
                 if (i === 0) { //Si es el primer elemento lo activa y muestra
@@ -128,7 +154,7 @@
                 }
 
                 currentTabs.push(labels[obj.type]);
-				
+
                 li.append(a);
                 ul.append(li);
 
@@ -155,12 +181,12 @@
 
         function renderByType(dataItem) {
             switch (dataItem.type) {
-            case 0:
-                return renderPdf(dataItem);
-            case 1:
-                return renderVideo(dataItem);
-			case 2:
-                return renderPps(dataItem);
+                case 0:
+                    return renderPdf(dataItem);
+                case 1:
+                    return renderVideo(dataItem);
+                case 2:
+                    return renderPps(dataItem);
             }
         }
 
@@ -232,6 +258,140 @@
 
     }
 
+    var drawHypotheses = function () {
+        var hypotheses = db.content.hypotheses;
+        var questions = db.content.questions;
+
+        if (hypotheses) {
+            var wrapper = $('<div>');
+            wrapper.attr('id', 'sap-hypotheses')
+
+            drawH2(labels.hypotheses, wrapper);
+
+            var hypContainer = $('<div>');
+
+            hypContainer.attr('id', 'hypContainer');
+
+            $.each(hypotheses, function (i, obj) {
+                var panel = $('<div>');
+                panel.attr('id', 'hyp_' + i);
+                $.data(panel[0], 'dataItem', obj);
+                panel.addClass('panel panel-primary');
+                panel.css('width', (100 / hypotheses.length) - (hypotheses.length * 1) + '%');
+                panel.css('margin', '2px');
+                panel.css('vertical-align', 'top');
+
+                if (hypotheses.length > 1) {
+                    panel.css('display', 'inline-block');
+                }
+
+                panel.on('drop dragdrop', function (e) {
+                    var sourceId = '#' + e.originalEvent.dataTransfer.getData("text");
+                    var sourceHeigth = $(sourceId).height() + $(sourceId).outerHeight();
+
+                    var panelBody = $(this).children().last();
+
+                    var panelBodyHeight = (panelBody.children().length * sourceHeigth) + sourceHeigth;
+
+                    panelBody.css('background-color', '#eee');
+                    panelBody.height(panelBodyHeight);
+                    panelBody.append($(sourceId));
+
+                    var qContainer = $('#qContainer');
+                    if (!qContainer.children().length) {
+                        qContainer.text('Drag here question without hypothesys');
+                        qContainer.addClass('panel-heading');
+                    }
+                });
+                panel.on('dragenter', function (event) {
+                    event.preventDefault();
+                })
+                panel.on('dragleave', function () {
+                    $(this).children().last().css('background-color', '#eee');
+                })
+                panel.on('dragover', function (event) {
+                    event.preventDefault();
+                    $(this).children().last().css('background-color', 'gray');
+                })
+
+                var panelTitle = $('<div>');
+                panelTitle.addClass('panel-heading');
+                panelTitle.text(obj.desc);
+
+                var panelBody = $('<div>');
+                panelBody.height(30).css('background-color', '#eee');
+
+                panel.append(panelTitle);
+                panel.append(panelBody);
+
+                hypContainer.append(panel);
+            });
+
+            var qContainer = $('<div>');
+            qContainer.attr('id', 'qContainer');
+
+            qContainer.on('drop dragdrop', function (e) {
+                var sourceId = '#' + e.originalEvent.dataTransfer.getData("text");
+                if (!$(this).children().length) {
+                    $(this).empty();
+                }
+                $(this).css('background-color', '#fff');
+                $(this).append($(sourceId));
+            });
+            qContainer.on('dragleave', function () {
+                $(this).css('background-color', '#fff');
+            })
+            qContainer.on('dragover', function () {
+                event.preventDefault();
+                $(this).css('background-color', 'gray');
+            })
+            qContainer.on('dragenter', function (event) {
+                event.preventDefault();
+            })
+
+            $.each(questions, function (i, obj) {
+                var qdiv = $('<div>');
+                $.data(qdiv, 'dataItem', obj);
+                qdiv.text(obj.desc);
+
+                qdiv.attr('id', 'q_' + i);
+                qdiv.attr('draggable', 'true');
+                qdiv.on('dragstart', function (e) {
+                    e.originalEvent.dataTransfer.setData('text', this.id);
+                });
+                qdiv.addClass('panel-heading');
+                qdiv.css('border', 'solid 1px gainsboro').css('margin-bottom', '5px').css('background-color', '#fff');
+
+                qContainer.append(qdiv);
+            });
+
+            var btnPlay = $('<button>');
+            btnPlay.addClass('btn btn-success');
+            btnPlay.text('Play');
+
+            btnPlay.on('click', function () {
+                var hypContainer = $("#hypContainer");
+                $.each(hypContainer.children(), function (i, obj) {
+                    var key = $.data(obj, 'dataItem').key;
+                    var panelBody = $(obj).children().last();
+                    var answersInside =panelBody.children();
+
+                    if(answersInside.length > 0)
+                    {
+                        $.each(answersInside,function(j,ob){
+                            //TODO: Validate body answers
+                        });
+                    }                         
+                });
+            });
+
+            wrapper.append(hypContainer);
+            wrapper.append(qContainer);
+            wrapper.append(btnPlay);
+            container.append(wrapper);
+        }
+    }
+
     var drawActivities = function () {
         var wrapper = $('<div>');
         wrapper.attr('id', 'sap-activities')
@@ -257,7 +417,6 @@
     }
 
     function drawH2(content, wrapper) {
-        var title = labels.materials;
         var h2 = $('<h2>');
         h2.addClass('page-header')
         h2.text(content);
@@ -265,6 +424,20 @@
         wrapper = wrapper || container;
 
         wrapper.append(h2);
+    }
+
+    function displayMessage(msg, type) {
+        var msgbox = $('#msgbox');
+        msgbox.text(msg);
+        msgbox.removeClass();
+
+        if (type == msgTypes.success) {
+            msgbox.addClass('alert alert-success');
+        } else if (type == msgTypes.error) {
+            msgbox.addClass('alert alert-danger');
+        } else {
+            msgbox.addClass('alert alert-info');
+        }
     }
 
 })(window);
