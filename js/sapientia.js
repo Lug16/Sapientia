@@ -15,7 +15,9 @@
         materials: 'Materiales',
         activities: 'Actividades',
         hypotheses: 'Hipótesis',
-        tests: 'Pruebas'
+        tests: 'Pruebas',
+        execute: 'Ejecutar',
+        dragnohypmsg: 'Arrastre aqui aquellas que no pertenezcan'
     }
 
     var fonsUrl = '';
@@ -66,7 +68,7 @@
 
     //Cuando recibe los objetos de la consulta JSON
     var loadObjects = function (data) {
-        console.info(data);
+        //console.info(data);
         db = data;
         container.data("info", data);
         build();
@@ -299,7 +301,7 @@
 
                     var qContainer = $('#qContainer');
                     if (!qContainer.children().length) {
-                        qContainer.text('Drag here question without hypothesys');
+                        qContainer.text(labels.dragnohypmsg);
                         qContainer.addClass('panel-heading');
                     }
                 });
@@ -351,7 +353,7 @@
 
             $.each(questions, function (i, obj) {
                 var qdiv = $('<div>');
-                $.data(qdiv, 'dataItem', obj);
+                $.data(qdiv[0], 'dataItem', obj);
                 qdiv.text(obj.desc);
 
                 qdiv.attr('id', 'q_' + i);
@@ -367,28 +369,42 @@
 
             var btnPlay = $('<button>');
             btnPlay.addClass('btn btn-success');
-            btnPlay.text('Play');
+            btnPlay.text(labels.execute);
 
             btnPlay.on('click', function () {
                 var hypContainer = $("#hypContainer");
                 $.each(hypContainer.children(), function (i, obj) {
                     var key = $.data(obj, 'dataItem').key;
                     var panelBody = $(obj).children().last();
-                    var answersInside =panelBody.children();
+                    var answersInside = panelBody.children();
 
-                    if(answersInside.length > 0)
-                    {
-                        $.each(answersInside,function(j,ob){
-                            //TODO: Validate body answers
-                        });
-                    }                         
+                    validateAnswers(answersInside, key);
                 });
+
+                var qContainer = $('#qContainer');
+
+                var answersInside = qContainer.children();
+
+                validateAnswers(answersInside, null);
             });
 
             wrapper.append(hypContainer);
             wrapper.append(qContainer);
             wrapper.append(btnPlay);
             container.append(wrapper);
+        }
+
+        var validateAnswers = function (answersInside, key) {
+            if (answersInside.length > 0) {
+                $.each(answersInside, function (j, ob) {
+                    var qId = $.data(ob, 'dataItem').hkey;
+                    if (qId == key) {
+                        $(ob).css('background-color', '#87f159');
+                    } else {
+                        $(ob).css('background-color', '#f77a7a');
+                    }
+                });
+            }
         }
     }
 
