@@ -17,6 +17,7 @@
         hypotheses: 'Hipótesis',
         tests: 'Pruebas',
         execute: 'Ejecutar',
+        validate: 'Validar',
         dragnohypmsg: 'Arrastre aqui aquellas que no pertenezcan'
     }
 
@@ -364,7 +365,33 @@
                 qdiv.addClass('panel-heading');
                 qdiv.css('border', 'solid 1px gainsboro').css('margin-bottom', '5px').css('background-color', '#fff');
 
+                $('<input />', { type: 'checkbox', value: 'Es Valido' }).appendTo(qdiv);
+
                 qContainer.append(qdiv);
+            });
+
+            var btnPlayValidation = $('<button>');
+            btnPlayValidation.addClass('btn btn-success');
+            btnPlayValidation.text(labels.validate);
+
+            btnPlayValidation.on('click', function () {
+                var hypContainer = $("#qContainer");
+                $.each(hypContainer.children(), function (i, obj) {
+                    var isvalid = $.data(obj, 'dataItem').valid;
+                    var ischecked = $(obj).children().last().is(':checked');
+
+                    console.info(isvalid);
+                    console.info('che' + ischecked);
+
+                    if(isvalid && ischecked)
+                    {
+                        $(obj).css('background-color', '#87f159');
+                    }else if(!isvalid && !ischecked){
+                        $(obj).css('background-color', '#87f159');
+                    }else{
+                        $(obj).css('background-color', '#f77a7a');
+                    }
+                });
             });
 
             var btnPlay = $('<button>');
@@ -390,6 +417,7 @@
 
             wrapper.append(hypContainer);
             wrapper.append(qContainer);
+            wrapper.append(btnPlayValidation);
             wrapper.append(btnPlay);
             container.append(wrapper);
         }
